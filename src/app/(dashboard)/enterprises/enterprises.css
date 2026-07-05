@@ -1,0 +1,21 @@
+/* Page specific styling for Enterprises module */
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.table-shell {
+  margin-top: 12px;
+}
+
+.department-detail-form {
+  margin-top: 16px;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

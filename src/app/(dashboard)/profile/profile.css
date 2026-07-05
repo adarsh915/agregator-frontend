@@ -1,0 +1,6 @@
+/* Profile page specific stylesheet styling overrides */
+.policy-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}

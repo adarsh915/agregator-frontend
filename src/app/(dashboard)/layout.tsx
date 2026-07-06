@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { Enterprise, Detection, InternalUser, Role, NotificationItem } from "@/lib/types";
 import { INITIAL_ENTERPRISES, INITIAL_DETECTIONS, INITIAL_USERS, INITIAL_ROLES, INITIAL_NOTIFICATIONS } from "@/lib/data";
@@ -60,6 +61,10 @@ export function useDashboard() {
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
   const [enterprises, setEnterprises] = useState<Enterprise[]>(INITIAL_ENTERPRISES);
   const [detections, setDetections] = useState<Detection[]>(INITIAL_DETECTIONS);
   const [users, setUsers] = useState<InternalUser[]>(INITIAL_USERS);
@@ -81,20 +86,73 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  // Check authentication on mount
   useEffect(() => {
-    // Load actual user details on mount
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
+    const checkAuth = () => {
+      const token = localStorage.getItem("authToken");
+      const userStr = localStorage.getItem("user");
+      
+      if (!token || !userStr) {
+        // Not authenticated, redirect to login
+        router.replace("/login");
+        return;
+      }
+
+      // Authenticated, load user profile
       try {
         const user = JSON.parse(userStr);
         if (user.displayName) setProfileName(user.displayName);
         if (user.email) setProfileEmail(user.email);
         if (user.role) setProfileRole(user.role);
+        setIsAuthenticated(true);
       } catch (err) {
         console.error("Failed to load user profile from storage", err);
+        // Invalid user data, redirect to login
+        router.replace("/login");
+      } finally {
+        setIsChecking(false);
       }
-    }
-  }, []);
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // Show loading state while checking authentication
+  if (isChecking) {
+    return (
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontFamily: "system-ui, -apple-system, sans-serif"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: "40px",
+            height: "40px",
+            border: "4px solid #e2e8f0",
+            borderTop: "4px solid #3b82f6",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+            margin: "0 auto 16px"
+          }}></div>
+          <p style={{ color: "#64748b" }}>Loading...</p>
+        </div>
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Don't render dashboard if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <DashboardContext.Provider

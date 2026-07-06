@@ -197,7 +197,7 @@ export default function EditEnterprisePage() {
       };
 
       const result = await enterpriseApi.update(enterpriseId, updateData);
-      console.log('Update result:', result); // Debug log
+
       
       if (result.ok) {
         await Swal.fire({

@@ -22,9 +22,9 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      console.log('Attempting login...');
+
       const response = await authApi.login({ email, password });
-      console.log('Login response:', response);
+
       
       if (response.success) {
         console.log('Login successful, redirecting...');

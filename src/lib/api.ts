@@ -40,14 +40,7 @@ async function apiRequest(
 
   const data = await response.json();
   
-  // Debug logging
-  console.log('API Response:', { 
-    endpoint, 
-    status: response.status, 
-    statusText: response.statusText,
-    ok: response.ok,
-    data 
-  });
+
 
   if (!response.ok) {
     throw new Error(data.error || `API Error: ${response.status}`);
@@ -567,11 +560,7 @@ export const uploadApi = {
 
     const data = await response.json();
     
-    console.log('Upload Response:', { 
-      status: response.status, 
-      ok: response.ok,
-      data 
-    });
+
 
     if (!response.ok) {
       throw new Error(data.error || `Upload failed: ${response.status}`);

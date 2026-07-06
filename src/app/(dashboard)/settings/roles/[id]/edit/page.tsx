@@ -204,26 +204,16 @@ export default function EditRolePage() {
         throw new Error("Role not loaded");
       }
 
-      console.log('🔄 Step 1: Updating role description...');
-      console.log('API Call: PUT /api/v1/roles/' + roleId);
-      
       // Send all required fields to match backend expectations
       const updatePayload = {
         displayName: role.displayName,  // Keep existing display name
         description: description,        // Updated description
         isActive: role.isActive !== undefined ? role.isActive : true  // Keep existing or default to true
       };
-      console.log('Payload:', updatePayload);
       
       const updateResult = await rolesApi.update(roleId, updatePayload);
-      console.log('✅ Step 1 Success:', updateResult);
 
-      console.log('🔄 Step 2: Updating permissions...');
-      console.log('API Call: PUT /api/v1/roles/' + roleId + '/permissions');
-      console.log('Payload:', { permissionIds, count: permissionIds.length });
-      
       const permResult = await rolesApi.updatePermissions(roleId, permissionIds);
-      console.log('✅ Step 2 Success:', permResult);
 
       await Swal.fire("Success", "Role permissions updated successfully.", "success");
       router.push("/settings");

@@ -56,8 +56,7 @@ export default function UsersPage() {
           lastLogin: backendUser.lastLoginAt || "Never Logged In"
         }));
 
-        console.log("✅ Transformed users:", transformedUsers);
-        console.log("✅ Number of users:", transformedUsers.length);
+
         setUsers(transformedUsers);
       } else {
         console.error("❌ Users response not OK:", usersResponse);
@@ -117,8 +116,7 @@ export default function UsersPage() {
             height: 40,
             border: "4px solid #f3f4f6",
             borderTopColor: "#3b82f6",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite"
+            borderRadius: "50%"
           }} />
           <p style={{ marginLeft: 16, color: "#64748b" }}>Loading users...</p>
         </div>

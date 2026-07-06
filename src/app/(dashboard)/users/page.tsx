@@ -100,29 +100,6 @@ export default function UsersPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <section className="users-page">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Access Controls</p>
-            <h3>Internal Dashboard Staff</h3>
-          </div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
-          <div style={{ 
-            display: "inline-block",
-            width: 40,
-            height: 40,
-            border: "4px solid #f3f4f6",
-            borderTopColor: "#3b82f6",
-            borderRadius: "50%"
-          }} />
-          <p style={{ marginLeft: 16, color: "#64748b" }}>Loading users...</p>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="users-page">

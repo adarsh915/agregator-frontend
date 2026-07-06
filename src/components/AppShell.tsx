@@ -162,7 +162,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                 </svg>
               </span>
-              <span className="nav-label">Dashboard Staff</span>
+              <span className="nav-label">Users</span>
             </Link>
 
             <Link
@@ -215,7 +215,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </span>
                   <span className="nav-label">Settings</span>
                 </div>
-                <span style={{ fontSize: "0.65rem", color: "var(--muted)", transition: "transform var(--transition-fast)", transform: sidebarSettingsOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+                <span style={{ fontSize: "0.65rem", color: "var(--muted)", transition: "transform var(--transition-fast)", transform: sidebarSettingsOpen ? "rotate(180deg)" : "rotate(0deg)" }}>â–¼</span>
               </button>
               {sidebarSettingsOpen && (
                 <div style={{ paddingLeft: 32, display: "grid", gap: 4 }}>

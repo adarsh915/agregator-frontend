@@ -43,15 +43,7 @@ export default function AddUserPage() {
   };
 
   const handleRoleToggle = (roleId: string) => {
-    setRoleIds(prev => {
-      if (prev.includes(roleId)) {
-        // Remove role (but keep at least one)
-        return prev.length > 1 ? prev.filter(id => id !== roleId) : prev;
-      } else {
-        // Add role
-        return [...prev, roleId];
-      }
-    });
+    setRoleIds([roleId]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,7 +110,7 @@ export default function AddUserPage() {
         </div>
         <div className="section-controls">
           <button onClick={() => router.back()} className="filter-reset-btn">
-            ← Back to Users
+            Back to Users
           </button>
         </div>
       </div>
@@ -180,7 +172,7 @@ export default function AddUserPage() {
             </label>
 
             <label className="filter-control">
-              <span style={{ fontWeight: 600, color: "#0f172a" }}>Assign Roles * (Select one or more)</span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>Assign Role * (Select one)</span>
               <div style={{
                 border: "1px solid #e2e8f0",
                 borderRadius: 8,
@@ -216,7 +208,8 @@ export default function AddUserPage() {
                         }}
                       >
                         <input
-                          type="checkbox"
+                          type="radio"
+                          name="roleId"
                           checked={roleIds.includes(role.id)}
                           onChange={() => handleRoleToggle(role.id)}
                           style={{ 
@@ -261,10 +254,10 @@ export default function AddUserPage() {
                 justifyContent: "space-between"
               }}>
                 <small style={{ color: "#475569", fontSize: "0.85rem", fontWeight: 500 }}>
-                  Selected Roles: {roleIds.length}
+                  Selected Role: {roleIds.length}
                 </small>
                 <small style={{ color: "#64748b", fontSize: "0.8rem" }}>
-                  User will inherit permissions from all selected roles
+                  User will inherit permissions from the selected role
                 </small>
               </div>
             </label>

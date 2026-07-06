@@ -78,40 +78,40 @@ export default function BillingRecordsPage() {
           <div className="panel-card" style={{ padding: "20px" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", marginBottom: "8px" }}>Total Revenue</p>
             <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0 }}>
-              {formatCurrency(stats.totalRevenue)}
+              {formatCurrency(stats.totalRevenue || 0)}
             </h2>
             <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-              {stats.totalRecords} total records
+              {stats.totalRecords || 0} total records
             </p>
           </div>
 
           <div className="panel-card" style={{ padding: "20px" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", marginBottom: "8px" }}>Paid Amount</p>
             <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#10b981", margin: 0 }}>
-              {formatCurrency(stats.paidAmount)}
+              {formatCurrency(stats.paidAmount || 0)}
             </h2>
             <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-              {stats.paidRecords} paid records
+              {stats.paidRecords || 0} paid records
             </p>
           </div>
 
           <div className="panel-card" style={{ padding: "20px" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", marginBottom: "8px" }}>Pending Amount</p>
             <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#f59e0b", margin: 0 }}>
-              {formatCurrency(stats.pendingAmount)}
+              {formatCurrency(stats.pendingAmount || 0)}
             </h2>
             <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-              {stats.pendingRecords} pending records
+              {stats.pendingRecords || 0} pending records
             </p>
           </div>
 
           <div className="panel-card" style={{ padding: "20px" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", marginBottom: "8px" }}>Overdue Amount</p>
             <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#ef4444", margin: 0 }}>
-              {formatCurrency(stats.overdueAmount)}
+              {formatCurrency(stats.overdueAmount || 0)}
             </h2>
             <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-              {stats.overdueRecords} overdue records
+              {stats.overdueRecords || 0} overdue records
             </p>
           </div>
         </div>

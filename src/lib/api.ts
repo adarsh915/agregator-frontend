@@ -257,6 +257,7 @@ export interface EnterpriseResponse {
   hqState?: string;
   hqPincode?: string;
   status: 'active' | 'inactive' | 'suspended';
+  packageId?: string;
   billingPlan: 'starter' | 'professional' | 'enterprise';
   billingCycle: 'monthly' | 'quarterly' | 'yearly';
   billingAmount: number;

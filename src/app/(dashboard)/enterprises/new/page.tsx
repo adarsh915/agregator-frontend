@@ -23,7 +23,7 @@ export default function NewEnterprisePage() {
       if (res.ok && res.packages) {
         setPackages(res.packages);
         if (res.packages.length > 0 && !formData.packageId) {
-          setFormData((prev) => ({ ...prev, packageId: res.packages[0].id }));
+          setFormData((prev) => ({ ...prev, packageId: res.packages![0].id }));
         }
       }
     });

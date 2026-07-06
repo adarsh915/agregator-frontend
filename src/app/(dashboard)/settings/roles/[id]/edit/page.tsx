@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Swal from "sweetalert2";
-import { rolesApi, permissionsApi, handleApiError, Permission, RoleResponse } from "@/lib/api";
+import { rolesApi, permissionsApi, handleApiError, Permission, RoleResponse, RolePermissionAssignment } from "@/lib/api";
 import { RolePermission } from "@/lib/types";
 import "../../../settings.css";
 
 // Map backend permissions to UI matrix format
-function mapBackendPermissionsToMatrix(backendPermissions: Permission[]): RolePermission[] {
+function mapBackendPermissionsToMatrix(backendPermissions: RolePermissionAssignment[]): RolePermission[] {
   const modules = ["Dashboard", "Enterprises", "Detections", "Users", "Roles & Permissions", "Packages", "Billing Records", "Audit Logs"];
   
   const matrix: RolePermission[] = modules.map(module => ({
@@ -199,6 +199,10 @@ export default function EditRolePage() {
 
     try {
       setSaving(true);
+
+      if (!role) {
+        throw new Error("Role not loaded");
+      }
 
       console.log('🔄 Step 1: Updating role description...');
       console.log('API Call: PUT /api/v1/roles/' + roleId);

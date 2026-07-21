@@ -173,23 +173,40 @@ export default function AuditLogsDataTable({
 
   return (
     <div>
-      {/* Filter Toolbar matching Enterprise page style */}
-      <div className="filter-toolbar" style={{ marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ flex: "1 1 100%", marginBottom: 8 }}>
-          <label className="filter-control" style={{ width: "100%" }}>
-            <span className="material-symbols-outlined" style={{ position: "absolute", left: 12, top: 38, color: "#94a3b8", fontSize: 20 }}>
-              search
-            </span>
+      <div className="filter-toolbar" style={{ marginBottom: 20 }}>
+        <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "200px" }}>
+          <span>Search actions</span>
+          <div style={{ position: "relative", width: "100%" }}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                position: "absolute",
+                left: 12,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 16,
+                height: 16,
+                color: "var(--muted)",
+              }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
             <input
               type="text"
-              placeholder="Search actions..."
+              placeholder="Search actions, admins, or resources..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              style={{ paddingLeft: 40, width: "100%", height: "42px" }}
+              style={{ paddingLeft: 38, width: "100%" }}
             />
-          </label>
-        </div>
-        <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "160px" }}>
+          </div>
+        </label>
+        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "160px" }}>
           <span>Action Type</span>
           <select
             value={filterAction}
@@ -205,7 +222,7 @@ export default function AuditLogsDataTable({
           </select>
         </label>
 
-        <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "160px" }}>
+        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "160px" }}>
           <span>Admin User</span>
           <select
             value={filterActor}
@@ -221,7 +238,7 @@ export default function AuditLogsDataTable({
           </select>
         </label>
 
-        <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "140px" }}>
+        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "140px" }}>
           <span>From Date</span>
           <input
             type="date"
@@ -231,7 +248,7 @@ export default function AuditLogsDataTable({
           />
         </label>
 
-        <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "140px" }}>
+        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "140px" }}>
           <span>To Date</span>
           <input
             type="date"

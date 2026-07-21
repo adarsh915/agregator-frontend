@@ -46,6 +46,16 @@ export const usersApi = {
     return { ok: response.success, users: response.data, pagination: response.pagination };
   },
 
+  // GET /api/v1/users/stats - Get user statistics
+  getStats: async (): Promise<{ ok: boolean; stats?: any; error?: string }> => {
+    try {
+      const response = await apiRequest('/api/v1/users/stats');
+      return { ok: response.ok ?? response.success, stats: response.stats || response.data };
+    } catch (e) {
+      return { ok: false, error: 'Failed to fetch user stats' };
+    }
+  },
+
   // GET /api/v1/users/:id - Get single user
   getById: async (id: string): Promise<{ ok: boolean; user: UserResponse }> => {
     const response = await apiRequest(`/api/v1/users/${id}`);

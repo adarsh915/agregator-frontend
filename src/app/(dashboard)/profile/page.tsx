@@ -133,7 +133,7 @@ export default function ProfilePage() {
             <h3>My Operator Profile</h3>
           </div>
         </div>
-        <PageSkeleton />
+        <PageSkeleton layout="page" />
       </section>
     );
   }

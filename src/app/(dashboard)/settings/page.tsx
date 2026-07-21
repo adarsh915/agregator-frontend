@@ -7,6 +7,7 @@ import { useDashboard } from "../layout";
 import { Role } from "@/lib/types";
 import { rolesApi, permissionsApi, usersApi, Permission, RoleResponse, handleApiError } from "@/lib/api";
 import RequirePermission from "@/components/auth/RequirePermission";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 import "./settings.css";
 
 export default function SettingsPage() {
@@ -122,15 +123,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <section>
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Configuration</p>
-            <h3>System Settings</h3>
-          </div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
-          <p style={{ color: "#64748b" }}>Loading roles and permissions...</p>
-        </div>
+        <PageSkeleton layout="page" />
       </section>
     );
   }

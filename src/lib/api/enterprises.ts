@@ -111,8 +111,13 @@ export const enterpriseApi = {
   },
 
   // GET /api/v1/enterprises/stats - Dashboard aggregated stats
-  getStats: async (): Promise<{ ok: boolean; stats: EnterpriseStats }> => {
-    return apiRequest('/api/v1/enterprises/stats');
+  getStats: async (): Promise<{ ok: boolean; stats?: any; error?: string }> => {
+    try {
+      const response = await apiRequest('/api/v1/enterprises/stats');
+      return { ok: response.ok ?? response.success, stats: response.stats || response.data };
+    } catch (e) {
+      return { ok: false, error: 'Failed to fetch enterprise stats' };
+    }
   },
 
   // GET /api/v1/enterprises/:id - Get single enterprise
@@ -120,7 +125,6 @@ export const enterpriseApi = {
     return apiRequest(`/api/v1/enterprises/${id}`);
   },
 
-  // POST /api/v1/enterprises - Create new enterprise
   create: async (data: EnterpriseCreateRequest): Promise<{ ok: boolean; enterprise?: EnterpriseResponse; error?: string }> => {
     return apiRequest('/api/v1/enterprises', {
       method: 'POST',

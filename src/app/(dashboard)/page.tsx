@@ -24,100 +24,60 @@ const COLORS = ["#3b82f6", "#10b981", "#6366f1", "#f59e0b"];
 
 export default function OverviewPage() {
   const router = useRouter();
-  const { data: enterprises = [], isLoading: isLoadingEnterprises } = useQuery({
-    queryKey: ['enterprises'],
+  const { data: enterpriseStats, isLoading: isLoadingEnterprises } = useQuery({
+    queryKey: ['enterpriseStats'],
     queryFn: async () => {
-      const res = await enterpriseApi.list();
+      const res = await enterpriseApi.getStats();
+      return res.ok ? res.stats : {
+        total: 0,
+        active: 0,
+        inactive: 0,
+        suspended: 0,
+        mrr: 0,
+        planCounts: { starter: 0, professional: 0, enterprise: 0 },
+        revenueByPlan: { starter: 0, professional: 0, enterprise: 0 }
+      };
+    }
+  });
+
+  const { data: usersStats, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['usersStats'],
+    queryFn: async () => {
+      const res = await usersApi.getStats();
+      return res.ok ? res.stats : { active: 0, total: 0 };
+    }
+  });
+
+  // Fetch a small list for the "Recent Enterprises" table
+  const { data: enterprises = [], isLoading: isLoadingRecent } = useQuery({
+    queryKey: ['recentEnterprises'],
+    queryFn: async () => {
+      const res = await enterpriseApi.list({ limit: 5 });
       return res.ok ? res.enterprises || [] : [];
     }
   });
 
-  const { data: usersCount = { active: 0, total: 0 }, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['usersCount'],
-    queryFn: async () => {
-      const res = await usersApi.list();
-      if (res.ok) {
-        const users = res.users || [];
-        return {
-          active: users.filter((u: any) => u.isActive).length,
-          total: users.length
-        };
-      }
-      return { active: 0, total: 0 };
-    }
-  });
+  const loading = isLoadingEnterprises || isLoadingUsers || isLoadingRecent;
 
-  const loading = isLoadingEnterprises || isLoadingUsers;
-
-  // Calculate Monthly Recurring Revenue
-  const totalRevenueVal = useMemo(() => {
-    return enterprises
-      .filter((ent) => ent.status === "active")
-      .reduce((sum, ent) => {
-        // Convert to monthly equivalent
-        let monthlyAmount = ent.billingAmount;
-        if (ent.billingCycle === "yearly") {
-          monthlyAmount = ent.billingAmount / 12;
-        } else if (ent.billingCycle === "quarterly") {
-          monthlyAmount = ent.billingAmount / 3;
-        }
-        return sum + monthlyAmount;
-      }, 0);
-  }, [enterprises]);
-
-  // Count active enterprises
-  const activeEntCount = useMemo(() => {
-    return enterprises.filter((ent) => ent.status === "active").length;
-  }, [enterprises]);
-
-  // Count suspended enterprises
-  const suspendedEntCount = useMemo(() => {
-    return enterprises.filter((ent) => ent.status === "suspended").length;
-  }, [enterprises]);
-
-  // Count inactive enterprises
-  const inactiveEntCount = useMemo(() => {
-    return enterprises.filter((ent) => ent.status === "inactive").length;
-  }, [enterprises]);
+  const totalRevenueVal = enterpriseStats?.mrr || 0;
+  const activeEntCount = enterpriseStats?.active || 0;
+  const inactiveEntCount = enterpriseStats?.inactive || 0;
+  const suspendedEntCount = enterpriseStats?.suspended || 0;
+  const totalEntCount = enterpriseStats?.total || 0;
 
   // Package Distribution
-  const planDistributionData = useMemo(() => {
-    const counts = { starter: 0, professional: 0, enterprise: 0 };
-    enterprises.forEach((ent) => {
-      if (ent.billingPlan && ent.billingPlan in counts) {
-        counts[ent.billingPlan as keyof typeof counts]++;
-      }
-    });
-    return [
-      { name: "Starter", value: counts.starter },
-      { name: "Professional", value: counts.professional },
-      { name: "Enterprise", value: counts.enterprise },
-    ];
-  }, [enterprises]);
+  const planDistributionData = [
+    { name: "Starter", value: enterpriseStats?.planCounts?.starter || 0 },
+    { name: "Professional", value: enterpriseStats?.planCounts?.professional || 0 },
+    { name: "Enterprise", value: enterpriseStats?.planCounts?.enterprise || 0 },
+  ];
 
   // Revenue by Package
-  const revenueByPackage = useMemo(() => {
-    const revenue = { starter: 0, professional: 0, enterprise: 0 };
-    enterprises
-      .filter(ent => ent.status === "active")
-      .forEach((ent) => {
-        let monthlyAmount = ent.billingAmount;
-        if (ent.billingCycle === "yearly") {
-          monthlyAmount = ent.billingAmount / 12;
-        } else if (ent.billingCycle === "quarterly") {
-          monthlyAmount = ent.billingAmount / 3;
-        }
-        
-        if (ent.billingPlan && ent.billingPlan in revenue) {
-          revenue[ent.billingPlan as keyof typeof revenue] += monthlyAmount;
-        }
-      });
-    return [
-      { name: "Starter", revenue: revenue.starter },
-      { name: "Professional", revenue: revenue.professional },
-      { name: "Enterprise", revenue: revenue.enterprise },
-    ];
-  }, [enterprises]);
+  const revenueByPackage = [
+    { name: "Starter", revenue: enterpriseStats?.revenueByPlan?.starter || 0 },
+    { name: "Professional", revenue: enterpriseStats?.revenueByPlan?.professional || 0 },
+    { name: "Enterprise", revenue: enterpriseStats?.revenueByPlan?.enterprise || 0 },
+  ];
 
   if (loading) {
     return (
@@ -138,7 +98,7 @@ export default function OverviewPage() {
 
         <article className="stat-card">
           <span>Total Enterprises</span>
-          <strong>{enterprises.length}</strong>
+          <strong>{totalEntCount}</strong>
           <p>
             {activeEntCount} active, {inactiveEntCount} inactive, {suspendedEntCount} suspended
           </p>
@@ -158,7 +118,7 @@ export default function OverviewPage() {
         <article className="stat-card">
           <span>Active Operator Staff</span>
           <strong>
-            {usersCount.active} / {usersCount.total}
+            {usersStats.active} / {usersStats.total}
           </strong>
           <p>Aggregator console users</p>
         </article>

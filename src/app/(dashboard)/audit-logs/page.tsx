@@ -10,12 +10,12 @@ import AuditLogsDataTable from "@/components/tables/AuditLogsDataTable";
 export default function AuditLogsPage() {
   const router = useRouter();
   const { profileRole } = useDashboard();
-  
+
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [actors, setActors] = useState<AuditLogActor[]>([]);
   const [actions, setActions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -32,7 +32,7 @@ export default function AuditLogsPage() {
   useEffect(() => {
     // Wait until profileRole is loaded
     if (profileRole === undefined) return;
-    
+
     // In our system, the DB role name is 'super_admin' but the UI might display it as 'Super Admin'
     // check both to be safe
     const isSuperAdmin = profileRole === "Super Admin" || profileRole === "super_admin";
@@ -123,30 +123,30 @@ export default function AuditLogsPage() {
         </button>
       </div>
 
-      <div className="panel-card" style={{ padding: 0 }}>
-        <AuditLogsDataTable 
-          data={logs}
-          loading={loading}
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          actions={actions}
-          actors={actors}
-          filterAction={filterAction}
-          setFilterAction={(val) => { setFilterAction(val); setPage(1); }}
-          filterActor={filterActor}
-          setFilterActor={(val) => { setFilterActor(val); setPage(1); }}
-          filterFrom={filterFrom}
-          setFilterFrom={(val) => { setFilterFrom(val); setPage(1); }}
-          filterTo={filterTo}
-          setFilterTo={(val) => { setFilterTo(val); setPage(1); }}
-          limit={limit}
-          onLimitChange={(val) => { setLimit(val); setPage(1); }}
-          filterSearch={filterSearch}
-          setFilterSearch={(val) => { setFilterSearch(val); setPage(1); }}
-          onReset={handleReset}
-        />
-      </div>
+
+      <AuditLogsDataTable
+        data={logs}
+        loading={loading}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        actions={actions}
+        actors={actors}
+        filterAction={filterAction}
+        setFilterAction={(val) => { setFilterAction(val); setPage(1); }}
+        filterActor={filterActor}
+        setFilterActor={(val) => { setFilterActor(val); setPage(1); }}
+        filterFrom={filterFrom}
+        setFilterFrom={(val) => { setFilterFrom(val); setPage(1); }}
+        filterTo={filterTo}
+        setFilterTo={(val) => { setFilterTo(val); setPage(1); }}
+        limit={limit}
+        onLimitChange={(val) => { setLimit(val); setPage(1); }}
+        filterSearch={filterSearch}
+        setFilterSearch={(val) => { setFilterSearch(val); setPage(1); }}
+        onReset={handleReset}
+      />
+
     </section>
   );
 }

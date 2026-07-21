@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+import { PageContentSkeleton } from "@/components/ui/AppShellSkeleton";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { enterpriseApi, packageApi, uploadApi, BillingPackage } from "@/lib/api";
@@ -26,7 +28,7 @@ export default function EditEnterprisePage() {
   const [currentLogoPath, setCurrentLogoPath] = useState<string>('');
 
   useEffect(() => {
-    packageApi.list(false).then((res) => {
+    packageApi.list({ includeInactive: false }).then((res) => {
       if (res.ok && res.packages) {
         setPackages(res.packages);
       }
@@ -222,8 +224,8 @@ export default function EditEnterprisePage() {
 
   if (loading) {
     return (
-      <section>
-        <div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>
+      <section className="section">
+        <PageContentSkeleton />
       </section>
     );
   }
@@ -294,6 +296,7 @@ export default function EditEnterprisePage() {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                maxLength={200}
                 placeholder="Enter enterprise name"
               />
             </label>
@@ -352,6 +355,7 @@ export default function EditEnterprisePage() {
                 value={formData.generalEmail}
                 onChange={handleChange}
                 required
+                maxLength={200}
                 placeholder="info@company.com"
               />
             </label>
@@ -363,6 +367,8 @@ export default function EditEnterprisePage() {
                 name="generalPhone"
                 value={formData.generalPhone}
                 onChange={handleChange}
+                pattern="\+?[0-9\s\-()]{10,20}"
+                title="10-20 digits, optionally starting with +"
                 placeholder="+91 1234567890"
               />
             </label>
@@ -374,6 +380,7 @@ export default function EditEnterprisePage() {
                 name="apiUrl"
                 value={formData.apiUrl}
                 onChange={handleChange}
+                maxLength={200}
                 placeholder="https://api.company.com"
               />
             </label>
@@ -432,6 +439,7 @@ export default function EditEnterprisePage() {
                 name="hqStreet"
                 value={formData.hqStreet}
                 onChange={handleChange}
+                maxLength={500}
                 placeholder="Street address"
               />
             </label>
@@ -444,6 +452,7 @@ export default function EditEnterprisePage() {
                   name="hqCity"
                   value={formData.hqCity}
                   onChange={handleChange}
+                  maxLength={100}
                   placeholder="City"
                 />
               </label>
@@ -455,6 +464,7 @@ export default function EditEnterprisePage() {
                   name="hqState"
                   value={formData.hqState}
                   onChange={handleChange}
+                  maxLength={100}
                   placeholder="State"
                 />
               </label>
@@ -486,6 +496,7 @@ export default function EditEnterprisePage() {
                 value={formData.contactName}
                 onChange={handleChange}
                 required
+                maxLength={200}
                 placeholder="Full name"
               />
             </label>
@@ -497,6 +508,7 @@ export default function EditEnterprisePage() {
                 name="contactDesignation"
                 value={formData.contactDesignation}
                 onChange={handleChange}
+                maxLength={200}
                 placeholder="Manager, CEO, etc."
               />
             </label>
@@ -509,6 +521,7 @@ export default function EditEnterprisePage() {
                 value={formData.contactEmail}
                 onChange={handleChange}
                 required
+                maxLength={200}
                 placeholder="contact@company.com"
               />
             </label>
@@ -520,6 +533,8 @@ export default function EditEnterprisePage() {
                 name="contactPhone"
                 value={formData.contactPhone}
                 onChange={handleChange}
+                pattern="\+?[0-9\s\-()]{10,20}"
+                title="10-20 digits, optionally starting with +"
                 placeholder="+91 1234567890"
               />
             </label>

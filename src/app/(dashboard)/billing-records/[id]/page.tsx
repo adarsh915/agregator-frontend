@@ -6,6 +6,7 @@ import Link from "next/link";
 import { billingRecordsApi } from "@/lib/api";
 import type { BillingRecord } from "@/lib/types";
 import Swal from "sweetalert2";
+import { PageContentSkeleton } from "@/components/ui/AppShellSkeleton";
 
 export default function BillingRecordDetailPage() {
   const params = useParams();
@@ -101,7 +102,7 @@ export default function BillingRecordDetailPage() {
         Swal.fire({
           icon: "success",
           title: "Success!",
-          text: res.message || "Billing record marked as paid",
+          text: "Billing record marked as paid",
           timer: 2000,
           showConfirmButton: false,
         });
@@ -126,8 +127,8 @@ export default function BillingRecordDetailPage() {
 
   if (loading) {
     return (
-      <section>
-        <div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>
+      <section className="section">
+        <PageContentSkeleton />
       </section>
     );
   }

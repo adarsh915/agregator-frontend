@@ -18,7 +18,7 @@ import { Detection, Enterprise } from "@/lib/types";
 import "./detections.css";
 
 export default function DetectionsPage() {
-  const { detections, setDetections, enterprises } = useDashboard();
+  const { detections, setDetections } = useDashboard();
 
   // Search/Filters local state
   const [detSearchQuery, setDetSearchQuery] = useState("");
@@ -122,8 +122,7 @@ export default function DetectionsPage() {
   };
 
   const openDetectionDetail = (det: Detection) => {
-    const enterprise = enterprises.find((e) => e.name === det.enterpriseName);
-    setDetectionModal({ isOpen: true, item: det, enterprise });
+    setDetectionModal({ isOpen: true, item: det });
   };
 
   // 2. Filter & paginate list
@@ -292,8 +291,8 @@ export default function DetectionsPage() {
               style={{ padding: "8px 12px", background: "#fff" }}
             >
               <option value="All">All Enterprises</option>
-              {enterprises.map((e) => (
-                <option key={e.id} value={e.name}>{e.name}</option>
+              {Array.from(new Set(detections.map(d => d.enterpriseName))).map((name) => (
+                <option key={name} value={name}>{name}</option>
               ))}
             </select>
           </label>

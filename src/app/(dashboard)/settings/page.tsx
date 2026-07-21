@@ -6,18 +6,18 @@ import Swal from "sweetalert2";
 import { useDashboard } from "../layout";
 import { Role } from "@/lib/types";
 import { rolesApi, permissionsApi, usersApi, Permission, RoleResponse, handleApiError } from "@/lib/api";
+import RequirePermission from "@/components/auth/RequirePermission";
 import "./settings.css";
 
 export default function SettingsPage() {
   const router = useRouter();
   const {
-    roles,
-    setRoles,
-    users,
-    setUsers,
     settingsTab,
     setSettingsTab
   } = useDashboard();
+  
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   // API States
   const [loading, setLoading] = useState(true);
@@ -184,9 +184,11 @@ export default function SettingsPage() {
               <p className="eyebrow">Permissions</p>
               <h4>Roles Permission Grid</h4>
             </div>
-            <button onClick={() => router.push("/settings/roles/add")} className="export-summary-btn">
-              + Create New Role
-            </button>
+            <RequirePermission resource="roles" action="create" mode="hide">
+              <button onClick={() => router.push("/settings/roles/add")} className="export-summary-btn">
+                + Create New Role
+              </button>
+            </RequirePermission>
           </div>
 
           <div style={{ display: "grid", gap: 24 }}>
@@ -210,35 +212,39 @@ export default function SettingsPage() {
                       <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>{role.description}</p>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button 
-                        onClick={() => {
-                          const backendRoleId = backendRoleIdMap.get(role.name);
-                          if (backendRoleId) {
-                            router.push(`/settings/roles/${backendRoleId}/edit`);
+                      <RequirePermission resource="roles" action="update" mode="hide">
+                        <button 
+                          onClick={() => {
+                            const backendRoleId = backendRoleIdMap.get(role.name);
+                            if (backendRoleId) {
+                              router.push(`/settings/roles/${backendRoleId}/edit`);
+                            }
+                          }} 
+                          className="action-btn"
+                        >
+                          Edit Permissions
+                        </button>
+                      </RequirePermission>
+                      <RequirePermission resource="roles" action="delete" mode="hide">
+                        <button
+                          onClick={() => handleRoleDelete(role)}
+                          className="action-btn danger"
+                          disabled={countAssigned > 0 || role.isSystem}
+                          title={
+                            role.isSystem 
+                              ? "System roles cannot be deleted" 
+                              : countAssigned > 0 
+                              ? "Cannot delete role while assigned to active users." 
+                              : ""
                           }
-                        }} 
-                        className="action-btn"
-                      >
-                        Edit Permissions
-                      </button>
-                      <button
-                        onClick={() => handleRoleDelete(role)}
-                        className="action-btn danger"
-                        disabled={countAssigned > 0 || role.isSystem}
-                        title={
-                          role.isSystem 
-                            ? "System roles cannot be deleted" 
-                            : countAssigned > 0 
-                            ? "Cannot delete role while assigned to active users." 
-                            : ""
-                        }
-                        style={{
-                          opacity: (countAssigned > 0 || role.isSystem) ? 0.4 : 1,
-                          cursor: (countAssigned > 0 || role.isSystem) ? "not-allowed" : "pointer"
-                        }}
-                      >
-                        Delete Role
-                      </button>
+                          style={{
+                            opacity: (countAssigned > 0 || role.isSystem) ? 0.4 : 1,
+                            cursor: (countAssigned > 0 || role.isSystem) ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Delete Role
+                        </button>
+                      </RequirePermission>
                     </div>
                   </div>
                 </article>

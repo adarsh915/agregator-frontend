@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { PageContentSkeleton } from "@/components/ui/AppShellSkeleton";
 import Swal from "sweetalert2";
 import { usersApi, rolesApi, handleApiError, RoleResponse } from "@/lib/api";
 import "../users.css";
@@ -94,8 +95,8 @@ export default function AddUserPage() {
             <h3>Create New Staff User</h3>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
-          <p style={{ color: "#64748b" }}>Loading...</p>
+        <div style={{ padding: "40px 0" }}>
+          <PageContentSkeleton />
         </div>
       </section>
     );

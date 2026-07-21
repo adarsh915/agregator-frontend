@@ -124,10 +124,13 @@ export interface BillingRecord {
 }
 
 export interface BillingRecordFilters {
-  status?: "pending" | "paid" | "overdue" | "cancelled";
+  status?: "pending" | "paid" | "overdue" | "cancelled" | "all";
   enterpriseId?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface SubscriptionMetrics {

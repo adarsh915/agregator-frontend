@@ -2,48 +2,48 @@
 
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { profileApi, handleApiError } from "@/lib/api";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 import "./profile.css";
-
 export default function ProfilePage() {
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Profile data
+  const { data: profile, isLoading: loading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const response = await profileApi.getProfile();
+      if (!response.ok) {
+        throw new Error("Failed to load profile");
+      }
+      return response.profile;
+    },
+    meta: {
+      errorMessage: "Failed to load profile"
+    }
+  });
+
+  // Profile data for edits (syncs with query data when loaded)
   const [profileId, setProfileId] = useState("");
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
   const [profileRole, setProfileRole] = useState("");
 
+  useEffect(() => {
+    if (profile) {
+      setProfileId(profile.id);
+      setProfileName(profile.displayName);
+      setProfileEmail(profile.email);
+      setProfileRole(profile.role);
+    }
+  }, [profile]);
+
   // Password fields
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await profileApi.getProfile();
-      if (response.ok) {
-        setProfileId(response.profile.id);
-        setProfileName(response.profile.displayName);
-        setProfileEmail(response.profile.email);
-        setProfileRole(response.profile.role);
-      } else {
-        Swal.fire("Error", "Failed to load profile", "error");
-      }
-    } catch (error) {
-      console.error("Failed to load profile:", error);
-      Swal.fire("Error", handleApiError(error), "error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const initials = profileName
     ? profileName
@@ -69,10 +69,8 @@ export default function ProfilePage() {
       });
 
       if (response.ok) {
-        Swal.fire("Profile Saved", response.message || "Your profile has been updated.", "success");
-        // Update local state with returned data
-        setProfileName(response.profile.displayName);
-        setProfileEmail(response.profile.email);
+        Swal.fire("Success", "Profile updated successfully", "success");
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
       } else {
         Swal.fire("Error", "Failed to update profile", "error");
       }
@@ -135,9 +133,7 @@ export default function ProfilePage() {
             <h3>My Operator Profile</h3>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
-          <p style={{ color: "#64748b" }}>Loading profile...</p>
-        </div>
+        <PageSkeleton />
       </section>
     );
   }

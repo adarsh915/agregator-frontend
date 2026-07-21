@@ -1,21 +1,18 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import AppShell from "@/components/AppShell";
-import { Enterprise, Detection, InternalUser, Role, NotificationItem } from "@/lib/types";
-import { INITIAL_ENTERPRISES, INITIAL_DETECTIONS, INITIAL_USERS, INITIAL_ROLES, INITIAL_NOTIFICATIONS } from "@/lib/data";
+import { useRouter, usePathname } from "next/navigation";
+import AppShell from "@/components/ui/AppShell";
+import AppShellSkeleton from "@/components/ui/AppShellSkeleton";
+import { AuthProvider, useAuth } from "@/lib/authContext";
+import Swal from "sweetalert2";
+import { Detection, NotificationItem } from "@/lib/types";
+import { INITIAL_DETECTIONS, INITIAL_NOTIFICATIONS } from "@/lib/data";
 
 interface DashboardContextType {
   // Core States
-  enterprises: Enterprise[];
-  setEnterprises: React.Dispatch<React.SetStateAction<Enterprise[]>>;
   detections: Detection[];
   setDetections: React.Dispatch<React.SetStateAction<Detection[]>>;
-  users: InternalUser[];
-  setUsers: React.Dispatch<React.SetStateAction<InternalUser[]>>;
-  roles: Role[];
-  setRoles: React.Dispatch<React.SetStateAction<Role[]>>;
   notifications: NotificationItem[];
   setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
 
@@ -60,15 +57,16 @@ export function useDashboard() {
   return context;
 }
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+function DashboardLayoutInner({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { hasPermission, status } = useAuth();
+  const permissionsLoading = status === "loading";
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [isRouteAuthorized, setIsRouteAuthorized] = useState(false);
 
-  const [enterprises, setEnterprises] = useState<Enterprise[]>(INITIAL_ENTERPRISES);
   const [detections, setDetections] = useState<Detection[]>(INITIAL_DETECTIONS);
-  const [users, setUsers] = useState<InternalUser[]>(INITIAL_USERS);
-  const [roles, setRoles] = useState<Role[]>(INITIAL_ROLES);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
 
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
@@ -117,30 +115,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     checkAuth();
   }, [router]);
 
-  // Show loading state while checking authentication
-  if (isChecking) {
-    return (
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        fontFamily: "system-ui, -apple-system, sans-serif"
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: "40px",
-            height: "40px",
-            border: "4px solid #e2e8f0",
-            borderTop: "4px solid #3b82f6",
-            borderRadius: "50%",
-            margin: "0 auto 16px"
-          }}></div>
-          <p style={{ color: "#64748b" }}>Loading...</p>
-        </div>
-
-      </div>
-    );
+  // Show loading state while checking authentication or permissions
+  if (isChecking || permissionsLoading) {
+    return <AppShellSkeleton />;
   }
 
   // Don't render dashboard if not authenticated
@@ -148,17 +125,49 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return null;
   }
 
+  // Route Guard Logic (Run once authenticated)
+  const routePermissions: Record<string, { resource: string, action: string }> = {
+    '/enterprises': { resource: 'enterprises', action: 'read' },
+    '/users': { resource: 'users', action: 'read' },
+    '/packages': { resource: 'packages', action: 'read' },
+    '/settings': { resource: 'roles', action: 'read' },
+    '/billing-records': { resource: 'billing', action: 'read' },
+    '/detections': { resource: 'detections', action: 'read' },
+    '/audit-logs': { resource: 'audit_logs', action: 'read' },
+  };
+
+  // Evaluate route permission synchronously during render to avoid flashing unauthorized content
+  let isAuthorized = true;
+  if (pathname === '/' && !hasPermission('dashboard', 'read')) {
+    isAuthorized = false;
+    // Delay redirect to avoid Next.js render-phase router errors
+    setTimeout(() => {
+      Swal.fire({ toast: true, position: 'top-end', text: 'You do not have permission to view the Dashboard.', icon: 'error', showConfirmButton: false, timer: 3000 });
+      router.replace('/profile');
+    }, 0);
+  } else {
+    const routePrefix = Object.keys(routePermissions).find(route => pathname === route || pathname.startsWith(route + '/'));
+    if (routePrefix) {
+      const { resource, action } = routePermissions[routePrefix];
+      if (!hasPermission(resource, action)) {
+        isAuthorized = false;
+        setTimeout(() => {
+          Swal.fire({ toast: true, position: 'top-end', text: `You don't have permission to access the ${resource} area.`, icon: 'error', showConfirmButton: false, timer: 3000 });
+          router.replace('/');
+        }, 0);
+      }
+    }
+  }
+
+  if (!isAuthorized) {
+    return null; // Don't render the layout or children while redirecting
+  }
+
   return (
     <DashboardContext.Provider
       value={{
-        enterprises,
-        setEnterprises,
         detections,
         setDetections,
-        users,
-        setUsers,
-        roles,
-        setRoles,
         notifications,
         setNotifications,
         desktopSidebarOpen,
@@ -191,5 +200,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     >
       <AppShell>{children}</AppShell>
     </DashboardContext.Provider>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return (
+    <AuthProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </AuthProvider>
   );
 }

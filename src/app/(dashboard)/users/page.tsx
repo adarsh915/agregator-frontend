@@ -6,44 +6,44 @@ import Swal from "sweetalert2";
 import { useDashboard } from "../layout";
 import { InternalUser } from "@/lib/types";
 import { usersApi, rolesApi, handleApiError, UserResponse } from "@/lib/api";
-import UsersDataTable from "@/components/UsersDataTable";
+import UsersDataTable from "@/components/tables/UsersDataTable";
+import TableSkeleton from "@/components/ui/TableSkeleton";
+import RequirePermission from "@/components/auth/RequirePermission";
 import "./users.css";
 
 export default function UsersPage() {
   const router = useRouter();
-  const { setRoles, profileEmail } = useDashboard();
+  const { profileEmail } = useDashboard();
 
   // Local state for users (loaded from backend)
   const [users, setUsers] = useState<InternalUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
 
   // Load users and roles from backend
   useEffect(() => {
     loadUsersAndRoles();
-  }, []);
+  }, [page, limit, search]);
 
   const loadUsersAndRoles = async () => {
     try {
       setLoading(true);
 
-      // Load roles first
+      // Load roles first (only needed once, but safe to call)
       const rolesResponse = await rolesApi.list();
-      if (rolesResponse.ok) {
-        setRoles(rolesResponse.roles.map(r => ({
-          id: parseInt(r.id.substring(0, 8), 16),
-          name: r.displayName,
-          description: r.description || "",
-          permissions: [],
-          isSystem: r.isSystem
-        })));
-      }
 
-      // Load users
-      console.log("Fetching users from backend...");
-      const usersResponse = await usersApi.list();
+      // Load users with pagination
+      console.log("Fetching users from backend with pagination...");
+      const usersResponse = await usersApi.list({ page, limit, search });
       console.log("Users response:", usersResponse);
 
       if (usersResponse.ok) {
+        if (usersResponse.pagination) {
+          setPagination(usersResponse.pagination);
+        }
         // Transform backend users to UI format
         const transformedUsers: InternalUser[] = usersResponse.users.map((backendUser: UserResponse) => ({
           id: backendUser.id,
@@ -109,19 +109,34 @@ export default function UsersPage() {
           <h3>Internal Dashboard Staff</h3>
         </div>
         <div className="section-controls">
-          <button onClick={() => router.push("/users/add")} className="export-summary-btn">
-            + Add Staff User
-          </button>
+          <RequirePermission resource="users" action="create" mode="hide">
+            <button onClick={() => router.push("/users/add")} className="export-summary-btn">
+              + Add Staff User
+            </button>
+          </RequirePermission>
         </div>
       </div>
 
       <div className="panel-card">
-        <UsersDataTable
-          data={users}
-          currentUserEmail={profileEmail}
-          onEdit={(user) => router.push(`/users/${user.id}/edit`)}
-          onDelete={handleUserDelete}
-        />
+        {loading ? (
+          <TableSkeleton />
+        ) : (
+          <UsersDataTable 
+            data={users} 
+            currentUserEmail={profileEmail}
+            onEdit={(user) => router.push(`/users/${user.id}/edit`)}
+            onDelete={handleUserDelete}
+            pagination={pagination}
+            onPaginationChange={(newPage, newLimit) => {
+              setPage(newPage);
+              setLimit(newLimit);
+            }}
+            onSearchChange={(newSearch) => {
+              setSearch(newSearch);
+              setPage(1);
+            }}
+          />
+        )}
       </div>
     </section>
   );

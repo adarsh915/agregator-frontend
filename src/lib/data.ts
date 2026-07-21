@@ -1,12 +1,4 @@
-import { Role, InternalUser, Enterprise, Detection, NotificationItem } from "./types";
-
-// Roles are now loaded from backend - no mock data
-export const INITIAL_ROLES: Role[] = [];
-
-// Users are now loaded from backend - no mock data
-export const INITIAL_USERS: InternalUser[] = [];
-
-export const INITIAL_ENTERPRISES: Enterprise[] = [];
+import { Detection, NotificationItem } from "./types";
 
 export const INITIAL_DETECTIONS: Detection[] = [
   { id: 1, enterpriseName: "Tata Consultancy Services Ltd", enterpriseLogo: "TCS", detectionType: "PII Leak", severity: "High", timestamp: "2026-07-03 10:45:22", status: "Pending" },

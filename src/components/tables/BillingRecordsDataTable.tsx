@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,145 +13,151 @@ import {
   SortingState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import Link from "next/link";
-import type { Enterprise } from "@/lib/types";
+import type { BillingRecord } from "@/lib/types";
 
-interface EnterpriseDataTableProps {
-  data: Enterprise[];
+interface BillingRecordsDataTableProps {
+  records: BillingRecord[];
+  onRefresh: () => void;
+  pagination?: { total: number; page: number; limit: number; totalPages: number };
+  onPaginationChange?: (page: number, limit: number) => void;
+  onSearchChange?: (search: string) => void;
 }
 
-// Separate component for enterprise avatar with image fallback
-function EnterpriseAvatar({ enterprise }: { enterprise: Enterprise }) {
-  const [imageError, setImageError] = useState(false);
-  const showImage = enterprise.logoStoragePath && !imageError;
-
-  return (
-    <>
-      {showImage ? (
-        <img
-          src={`${process.env.NEXT_PUBLIC_API_URL}${enterprise.logoStoragePath}`}
-          alt={enterprise.name}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            objectFit: "cover",
-            border: "2px solid #e2e8f0",
-          }}
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 600,
-            fontSize: "0.875rem",
-          }}
-        >
-          {enterprise.name.substring(0, 2).toUpperCase()}
-        </div>
-      )}
-    </>
-  );
-}
-
-export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) {
+export default function BillingRecordsDataTable({ 
+  records, 
+  onRefresh,
+  pagination,
+  onPaginationChange,
+  onSearchChange
+}: BillingRecordsDataTableProps) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const columns = useMemo<ColumnDef<Enterprise>[]>(
+  // Debounce search to avoid spamming the backend
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(globalFilter);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [globalFilter, onSearchChange]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const columns = useMemo<ColumnDef<BillingRecord>[]>(
     () => [
       {
-        accessorKey: "name",
-        header: "Enterprise Name",
-        cell: ({ row }) => {
-          const enterprise = row.original;
-          
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <EnterpriseAvatar enterprise={enterprise} />
-              <div>
-                <strong style={{ display: "block", fontSize: "0.9rem" }}>
-                  {enterprise.name}
-                </strong>
-                <small style={{ color: "#64748b", fontSize: "0.75rem" }}>
-                  {enterprise.gstinNumber}
-                </small>
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "contactEmail",
-        header: "Contact",
+        accessorKey: "enterpriseName",
+        header: "Enterprise",
         cell: ({ row }) => (
           <div>
-            <div style={{ fontWeight: 500, fontSize: "0.875rem" }}>
-              {row.original.contactName}
-            </div>
-            <a
-              href={`mailto:${row.original.contactEmail}`}
-              style={{
-                color: "#3b82f6",
-                textDecoration: "none",
-                fontSize: "0.75rem",
-              }}
-            >
-              {row.original.contactEmail}
-            </a>
+            <strong style={{ display: "block", fontSize: "0.95rem", marginBottom: 4 }}>
+              {row.original.enterpriseName || "Unknown"}
+            </strong>
+            <small style={{ color: "#64748b", fontSize: "0.8rem" }}>
+              {row.original.packageName}
+            </small>
           </div>
         ),
       },
       {
-        accessorKey: "billingPlan",
-        header: "Package",
-        cell: ({ row }) => {
-          const plan = row.original.billingPlan;
-          const badgeClass =
-            plan === "enterprise"
-              ? "enterprise"
-              : plan === "professional"
-              ? "warn"
-              : "healthy";
+        accessorKey: "periodStart",
+        header: "Billing Period",
+        cell: ({ row }) => (
+          <div style={{ fontSize: "0.875rem" }}>
+            <div>{formatDate(row.original.periodStart)}</div>
+            <small style={{ color: "#64748b" }}>
+              to {formatDate(row.original.periodEnd)}
+            </small>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "billingCycle",
+        header: "Cycle",
+        cell: ({ getValue }) => {
+          const cycle = getValue<string>();
           return (
-            <span className={`badge ${badgeClass}`} style={{ textTransform: "capitalize" }}>
-              {plan || 'starter'}
+            <span style={{ fontSize: "0.875rem", textTransform: "capitalize" }}>
+              {cycle}
             </span>
           );
         },
       },
       {
-        accessorKey: "billingAmount",
-        header: "Amount",
+        accessorKey: "totalAmount",
+        header: "Total Amount",
         cell: ({ row }) => (
-          <span style={{ fontWeight: 500, fontSize: "0.875rem" }}>
-            ₹{row.original.billingAmount.toLocaleString()}
-          </span>
+          <div style={{ fontSize: "0.875rem" }}>
+            <div style={{ fontWeight: 600 }}>
+              {formatCurrency(row.original.totalAmount)}
+            </div>
+            <small style={{ color: "#64748b" }}>
+              Base: {formatCurrency(row.original.amount)} + Tax: {formatCurrency(row.original.taxAmount)}
+            </small>
+          </div>
         ),
+      },
+      {
+        accessorKey: "dueDate",
+        header: "Due Date",
+        cell: ({ getValue }) => {
+          const dueDate = new Date(getValue<string>());
+          const today = new Date();
+          const isOverdue = dueDate < today;
+          
+          return (
+            <div style={{ fontSize: "0.875rem" }}>
+              <div style={{ color: isOverdue ? "#ef4444" : "inherit" }}>
+                {formatDate(getValue<string>())}
+              </div>
+              {isOverdue && (
+                <small style={{ color: "#ef4444", fontWeight: 500 }}>
+                  Overdue
+                </small>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const badgeClass =
-            status === "active"
-              ? "healthy"
-              : status === "suspended"
-              ? "critical"
-              : "warn";
+        cell: ({ getValue }) => {
+          const status = getValue<string>();
+          const statusColors = {
+            paid: "healthy",
+            pending: "warn",
+            overdue: "danger",
+            cancelled: "muted",
+          };
+          const statusBgColors = {
+            paid: "var(--success)",
+            pending: "var(--warning)",
+            overdue: "var(--danger)",
+            cancelled: "var(--muted)",
+          };
+          
           return (
             <span
-              className={`badge ${badgeClass}`}
+              className={`badge ${statusColors[status as keyof typeof statusColors]}`}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -163,12 +170,7 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor:
-                    status === "active"
-                      ? "var(--success)"
-                      : status === "suspended"
-                      ? "var(--danger)"
-                      : "var(--warning)",
+                  backgroundColor: statusBgColors[status as keyof typeof statusBgColors],
                 }}
               />
               {status}
@@ -177,43 +179,42 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
         },
       },
       {
-        accessorKey: "createdAt",
-        header: "Created",
-        cell: ({ row }) => (
-          <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
-            {new Date(row.original.createdAt).toLocaleDateString()}
-          </span>
-        ),
-      },
-      {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          const enterprise = row.original;
           return (
-            <Link 
-              href={`/enterprises/${enterprise.id}/edit`} 
-              className="action-btn"
-              style={{ textDecoration: "none" }}
-            >
-              Edit
-            </Link>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => router.push(`/billing-records/${row.original.id}`)}
+                className="action-btn"
+                style={{ textDecoration: "none", border: "none", cursor: "pointer", padding: "6px 12px" }}
+              >
+                View Details
+              </button>
+            </div>
           );
         },
         enableSorting: false,
       },
     ],
-    []
+    [router]
   );
 
   const table = useReactTable({
-    data,
+    data: records,
     columns,
     state: {
       sorting,
       columnFilters,
       globalFilter,
+      pagination: {
+        pageIndex: (pagination?.page || 1) - 1,
+        pageSize: pagination?.limit || 10,
+      }
     },
+    pageCount: pagination?.totalPages || -1,
+    manualPagination: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -221,11 +222,6 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
   return (
@@ -233,7 +229,7 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
       {/* Filter Toolbar */}
       <div className="filter-toolbar" style={{ marginBottom: 20 }}>
         <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "200px" }}>
-          <span>Search enterprises</span>
+          <span>Search records</span>
           <div style={{ position: "relative", width: "100%" }}>
             <svg
               viewBox="0 0 24 24"
@@ -257,44 +253,12 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
             </svg>
             <input
               type="text"
-              placeholder="Search name, GSTIN, contact..."
+              placeholder="Search enterprise, package..."
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
               style={{ paddingLeft: 38 }}
             />
           </div>
-        </label>
-
-        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "140px" }}>
-          <span>Status</span>
-          <select
-            value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
-            onChange={(e) =>
-              table.getColumn("status")?.setFilterValue(e.target.value || undefined)
-            }
-            style={{ height: "42px" }}
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="suspended">Suspended</option>
-          </select>
-        </label>
-
-        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "140px" }}>
-          <span>Package</span>
-          <select
-            value={(table.getColumn("billingPlan")?.getFilterValue() as string) ?? ""}
-            onChange={(e) =>
-              table.getColumn("billingPlan")?.setFilterValue(e.target.value || undefined)
-            }
-            style={{ height: "42px" }}
-          >
-            <option value="">All Packages</option>
-            <option value="starter">Starter</option>
-            <option value="professional">Professional</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
         </label>
 
         <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "120px" }}>
@@ -315,9 +279,8 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
         <button
           onClick={() => {
             setGlobalFilter("");
-            table.getColumn("status")?.setFilterValue(undefined);
-            table.getColumn("billingPlan")?.setFilterValue(undefined);
             table.resetSorting();
+            onRefresh();
           }}
           className="filter-reset-btn"
           style={{ height: "42px", display: "flex", alignItems: "center" }}
@@ -380,14 +343,12 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
                 <td colSpan={columns.length} className="empty-state-cell">
                   <div style={{ padding: "40px", textAlign: "center" }}>
                     <p style={{ margin: 0, fontWeight: 600, color: "#0f172a" }}>
-                      No enterprises found
+                      No billing records found
                     </p>
                     <p style={{ margin: "8px 0 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-                      {globalFilter ||
-                      table.getColumn("status")?.getFilterValue() ||
-                      table.getColumn("billingPlan")?.getFilterValue()
-                        ? "Try adjusting your filters"
-                        : "Get started by adding your first enterprise"}
+                      {globalFilter
+                        ? "Try adjusting your search or filters"
+                        : "Billing records will appear here when enterprises are created"}
                     </p>
                   </div>
                 </td>
@@ -428,15 +389,19 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
                 table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
+              pagination?.total || 0
             )}{" "}
-            of {table.getFilteredRowModel().rows.length} entries
+            of {pagination?.total || 0} entries
           </small>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button
               className="filter-reset-btn"
               style={{ margin: 0, padding: "8px 16px" }}
-              onClick={() => table.previousPage()}
+              onClick={() => {
+                if (onPaginationChange && table.getCanPreviousPage()) {
+                  onPaginationChange(table.getState().pagination.pageIndex, table.getState().pagination.pageSize);
+                }
+              }}
               disabled={!table.getCanPreviousPage()}
             >
               Previous
@@ -457,7 +422,11 @@ export default function EnterpriseDataTable({ data }: EnterpriseDataTableProps) 
             <button
               className="filter-reset-btn"
               style={{ margin: 0, padding: "8px 16px" }}
-              onClick={() => table.nextPage()}
+              onClick={() => {
+                if (onPaginationChange && table.getCanNextPage()) {
+                  onPaginationChange(table.getState().pagination.pageIndex + 2, table.getState().pagination.pageSize);
+                }
+              }}
               disabled={!table.getCanNextPage()}
             >
               Next

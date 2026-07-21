@@ -3,20 +3,29 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { packageApi, BillingPackage } from "@/lib/api";
-import PackagesDataTable from "@/components/PackagesDataTable";
+import PackagesDataTable from "@/components/tables/PackagesDataTable";
+import TableSkeleton from "@/components/ui/TableSkeleton";
+import RequirePermission from "@/components/auth/RequirePermission";
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState<BillingPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
   
   const loadPackages = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await packageApi.list(false);
+      const res = await packageApi.list({ includeInactive: false, page, limit, search });
       if (res.ok && res.packages) {
         setPackages(res.packages);
+        if (res.pagination) {
+          setPagination(res.pagination);
+        }
       } else {
         setError(res.error || "Failed to load packages");
       }
@@ -29,7 +38,7 @@ export default function PackagesPage() {
 
   useEffect(() => {
     loadPackages();
-  }, []);
+  }, [page, limit, search]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to deactivate this package?")) return;
@@ -53,9 +62,11 @@ export default function PackagesPage() {
           <p className="eyebrow">Management</p>
           <h3>Billing Packages</h3>
         </div>
-        <Link href="/packages/add" className="primary-action" style={{ textDecoration: "none" }}>
-          Add Package
-        </Link>
+        <RequirePermission resource="packages" action="create" mode="hide">
+          <Link href="/packages/add" className="primary-action" style={{ textDecoration: "none" }}>
+            Add Package
+          </Link>
+        </RequirePermission>
       </div>
 
       {error && (
@@ -71,11 +82,25 @@ export default function PackagesPage() {
         </div>
       )}
 
-      {loading ? (
-        <div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>
-      ) : (
-        <PackagesDataTable packages={packages} onDelete={handleDelete} onRefresh={loadPackages} />
-      )}
+      <div className="panel-card">
+        {loading ? (
+          <TableSkeleton />
+        ) : (
+          <PackagesDataTable 
+            data={packages} 
+            onDelete={handleDelete}
+            pagination={pagination}
+            onPaginationChange={(newPage, newLimit) => {
+              setPage(newPage);
+              setLimit(newLimit);
+            }}
+            onSearchChange={(newSearch) => {
+              setSearch(newSearch);
+              setPage(1);
+            }}
+          />
+        )}
+      </div>
     </section>
   );
 }

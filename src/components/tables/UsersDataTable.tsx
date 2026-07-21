@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,137 +12,152 @@ import {
   SortingState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import type { BillingRecord } from "@/lib/types";
+import { InternalUser } from "@/lib/types";
+import RequirePermission from "../auth/RequirePermission";
 
-interface BillingRecordsDataTableProps {
-  records: BillingRecord[];
-  onRefresh: () => void;
+interface UsersDataTableProps {
+  data: InternalUser[];
+  currentUserEmail: string | null;
+  onEdit: (user: InternalUser) => void;
+  onDelete: (user: InternalUser) => void;
+  pagination?: { total: number; page: number; limit: number; totalPages: number };
+  onPaginationChange?: (page: number, limit: number) => void;
+  onSearchChange?: (search: string) => void;
 }
 
-export default function BillingRecordsDataTable({ records, onRefresh }: BillingRecordsDataTableProps) {
-  const router = useRouter();
+export default function UsersDataTable({
+  data,
+  currentUserEmail,
+  onEdit,
+  onDelete,
+  pagination,
+  onPaginationChange,
+  onSearchChange,
+}: UsersDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  // Debounce search to avoid spamming the backend
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(globalFilter);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [globalFilter, onSearchChange]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const columns = useMemo<ColumnDef<BillingRecord>[]>(
+  const columns = useMemo<ColumnDef<InternalUser>[]>(
     () => [
       {
-        accessorKey: "enterpriseName",
-        header: "Enterprise",
-        cell: ({ row }) => (
-          <div>
-            <strong style={{ display: "block", fontSize: "0.95rem", marginBottom: 4 }}>
-              {row.original.enterpriseName || "Unknown"}
-            </strong>
-            <small style={{ color: "#64748b", fontSize: "0.8rem" }}>
-              {row.original.packageName}
-            </small>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "periodStart",
-        header: "Billing Period",
-        cell: ({ row }) => (
-          <div style={{ fontSize: "0.875rem" }}>
-            <div>{formatDate(row.original.periodStart)}</div>
-            <small style={{ color: "#64748b" }}>
-              to {formatDate(row.original.periodEnd)}
-            </small>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "billingCycle",
-        header: "Cycle",
-        cell: ({ getValue }) => {
-          const cycle = getValue<string>();
+        accessorKey: "name",
+        header: "User",
+        cell: ({ row }) => {
+          const user = row.original;
           return (
-            <span style={{ fontSize: "0.875rem", textTransform: "capitalize" }}>
-              {cycle}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "totalAmount",
-        header: "Total Amount",
-        cell: ({ row }) => (
-          <div style={{ fontSize: "0.875rem" }}>
-            <div style={{ fontWeight: 600 }}>
-              {formatCurrency(row.original.totalAmount)}
-            </div>
-            <small style={{ color: "#64748b" }}>
-              Base: {formatCurrency(row.original.amount)} + Tax: {formatCurrency(row.original.taxAmount)}
-            </small>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "dueDate",
-        header: "Due Date",
-        cell: ({ getValue }) => {
-          const dueDate = new Date(getValue<string>());
-          const today = new Date();
-          const isOverdue = dueDate < today;
-          
-          return (
-            <div style={{ fontSize: "0.875rem" }}>
-              <div style={{ color: isOverdue ? "#ef4444" : "inherit" }}>
-                {formatDate(getValue<string>())}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                }}
+              >
+                {user.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
               </div>
-              {isOverdue && (
-                <small style={{ color: "#ef4444", fontWeight: 500 }}>
-                  Overdue
-                </small>
-              )}
+              <div>
+                <strong style={{ display: "block", fontSize: "0.9rem" }}>
+                  {user.name}
+                </strong>
+                {user.email === currentUserEmail && (
+                  <span
+                    className="badge info"
+                    style={{
+                      fontSize: "0.7rem",
+                      padding: "2px 8px",
+                      marginTop: 4,
+                    }}
+                  >
+                    You
+                  </span>
+                )}
+              </div>
             </div>
           );
         },
+      },
+      {
+        accessorKey: "email",
+        header: "Email Address",
+        cell: ({ row }) => (
+          <a
+            href={`mailto:${row.original.email}`}
+            style={{
+              color: "#3b82f6",
+              textDecoration: "none",
+              fontSize: "0.875rem",
+            }}
+          >
+            {row.original.email}
+          </a>
+        ),
+      },
+      {
+        accessorKey: "roles",
+        header: "Assigned Roles",
+        cell: ({ row }) => (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {row.original.roles && row.original.roles.length > 0 ? (
+              row.original.roles.map((roleName, idx) => (
+                <span
+                  key={idx}
+                  className="badge info"
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  {roleName}
+                </span>
+              ))
+            ) : (
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: "#94a3b8",
+                  color: "white",
+                  fontSize: "0.75rem",
+                }}
+              >
+                No Role
+              </span>
+            )}
+          </div>
+        ),
+        enableSorting: false,
       },
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ getValue }) => {
-          const status = getValue<string>();
-          const statusColors = {
-            paid: "healthy",
-            pending: "warn",
-            overdue: "danger",
-            cancelled: "muted",
-          };
-          const statusBgColors = {
-            paid: "var(--success)",
-            pending: "var(--warning)",
-            overdue: "var(--danger)",
-            cancelled: "var(--muted)",
-          };
-          
+        cell: ({ row }) => {
+          const status = row.original.status;
           return (
             <span
-              className={`badge ${statusColors[status as keyof typeof statusColors]}`}
+              className={`badge ${status === "Active" ? "healthy" : "critical"}`}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                textTransform: "capitalize",
               }}
             >
               <span
@@ -151,7 +165,8 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor: statusBgColors[status as keyof typeof statusBgColors],
+                  backgroundColor:
+                    status === "Active" ? "var(--success)" : "var(--danger)",
                 }}
               />
               {status}
@@ -163,32 +178,53 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
+          const user = row.original;
+          const isCurrentUser = user.email === currentUserEmail;
           return (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => router.push(`/billing-records/${row.original.id}`)}
-                className="action-btn"
-                style={{ textDecoration: "none", border: "none", cursor: "pointer", padding: "6px 12px" }}
-              >
-                View Details
-              </button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <RequirePermission resource="users" action="update" mode="hide">
+                <button onClick={() => onEdit(user)} className="action-btn">
+                  Edit
+                </button>
+              </RequirePermission>
+              <RequirePermission resource="users" action="delete" mode="hide">
+                <button
+                  onClick={() => onDelete(user)}
+                  className="action-btn danger"
+                  disabled={isCurrentUser}
+                  style={{
+                    opacity: isCurrentUser ? 0.5 : 1,
+                    cursor: isCurrentUser ? "not-allowed" : "pointer",
+                  }}
+                  title={isCurrentUser ? "Cannot deactivate your own account" : ""}
+                >
+                  Deactivate
+                </button>
+              </RequirePermission>
             </div>
           );
         },
         enableSorting: false,
       },
     ],
-    [router]
+    [currentUserEmail, onEdit, onDelete]
   );
 
   const table = useReactTable({
-    data: records,
+    data,
     columns,
     state: {
       sorting,
       columnFilters,
       globalFilter,
+      pagination: {
+        pageIndex: (pagination?.page || 1) - 1,
+        pageSize: pagination?.limit || 10,
+      }
     },
+    pageCount: pagination?.totalPages || -1,
+    manualPagination: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -196,11 +232,6 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
   return (
@@ -208,7 +239,7 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
       {/* Filter Toolbar */}
       <div className="filter-toolbar" style={{ marginBottom: 20 }}>
         <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "200px" }}>
-          <span>Search records</span>
+          <span>Search users</span>
           <div style={{ position: "relative", width: "100%" }}>
             <svg
               viewBox="0 0 24 24"
@@ -232,12 +263,27 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
             </svg>
             <input
               type="text"
-              placeholder="Search enterprise, package..."
+              placeholder="Search name, email or role..."
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
               style={{ paddingLeft: 38 }}
             />
           </div>
+        </label>
+
+        <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "140px" }}>
+          <span>Status</span>
+          <select
+            value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
+            onChange={(e) =>
+              table.getColumn("status")?.setFilterValue(e.target.value || undefined)
+            }
+            style={{ height: "42px" }}
+          >
+            <option value="">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
         </label>
 
         <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "120px" }}>
@@ -258,8 +304,8 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
         <button
           onClick={() => {
             setGlobalFilter("");
+            table.getColumn("status")?.setFilterValue(undefined);
             table.resetSorting();
-            onRefresh();
           }}
           className="filter-reset-btn"
           style={{ height: "42px", display: "flex", alignItems: "center" }}
@@ -322,12 +368,12 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
                 <td colSpan={columns.length} className="empty-state-cell">
                   <div style={{ padding: "40px", textAlign: "center" }}>
                     <p style={{ margin: 0, fontWeight: 600, color: "#0f172a" }}>
-                      No billing records found
+                      No users found
                     </p>
                     <p style={{ margin: "8px 0 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-                      {globalFilter
-                        ? "Try adjusting your search or filters"
-                        : "Billing records will appear here when enterprises are created"}
+                      {globalFilter || table.getColumn("status")?.getFilterValue()
+                        ? "Try adjusting your filters"
+                        : "Get started by adding your first user"}
                     </p>
                   </div>
                 </td>
@@ -368,15 +414,19 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
                 table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
+              pagination?.total || 0
             )}{" "}
-            of {table.getFilteredRowModel().rows.length} entries
+            of {pagination?.total || 0} entries
           </small>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button
               className="filter-reset-btn"
               style={{ margin: 0, padding: "8px 16px" }}
-              onClick={() => table.previousPage()}
+              onClick={() => {
+                if (onPaginationChange && table.getCanPreviousPage()) {
+                  onPaginationChange(table.getState().pagination.pageIndex, table.getState().pagination.pageSize);
+                }
+              }}
               disabled={!table.getCanPreviousPage()}
             >
               Previous
@@ -397,7 +447,11 @@ export default function BillingRecordsDataTable({ records, onRefresh }: BillingR
             <button
               className="filter-reset-btn"
               style={{ margin: 0, padding: "8px 16px" }}
-              onClick={() => table.nextPage()}
+              onClick={() => {
+                if (onPaginationChange && table.getCanNextPage()) {
+                  onPaginationChange(table.getState().pagination.pageIndex + 2, table.getState().pagination.pageSize);
+                }
+              }}
               disabled={!table.getCanNextPage()}
             >
               Next

@@ -1,36 +1,35 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { Enterprise } from "@/lib/types";
 import { enterpriseApi } from "@/lib/api";
-import EnterpriseDataTable from "@/components/EnterpriseDataTable";
+import EnterpriseDataTable from "@/components/tables/EnterpriseDataTable";
+import TableSkeleton from "@/components/ui/TableSkeleton";
+import RequirePermission from "@/components/auth/RequirePermission";
 
 export default function EnterprisesPage() {
-  const [enterprises, setEnterprises] = useState<Enterprise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [billingPlan, setBillingPlan] = useState('');
 
-  useEffect(() => {
-    loadEnterprises();
-  }, []);
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['enterprises', page, limit, search, status, billingPlan],
+    queryFn: async () => {
+      const response = await enterpriseApi.list({ page, limit, search, status, billingPlan });
+      if (!response.ok) throw new Error("Failed to load enterprises");
+      return response;
+    },
+    placeholderData: keepPreviousData,
+  });
 
-  const loadEnterprises = async () => {
-    try {
-      setError(null);
-      const data = await enterpriseApi.list();
-      if (data.ok) {
-        setEnterprises(data.enterprises || []);
-      } else {
-        setError("Failed to load enterprises");
-      }
-    } catch (err) {
-      console.error("Error loading enterprises:", err);
-      setError(err instanceof Error ? err.message : "Failed to load enterprises");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = isLoading; // Only true on initial load, keeps old data on search
+
+  const enterprises = data?.enterprises || [];
+  const pagination = data?.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 };
 
   return (
     <section>
@@ -39,9 +38,11 @@ export default function EnterprisesPage() {
           <p className="eyebrow">Management</p>
           <h3>Enterprises</h3>
         </div>
-        <Link href="/enterprises/new" className="primary-action" style={{ textDecoration: "none" }}>
-          Create Enterprise
-        </Link>
+        <RequirePermission resource="enterprises" action="create" mode="hide">
+          <Link href="/enterprises/new" className="primary-action" style={{ textDecoration: "none" }}>
+            Create Enterprise
+          </Link>
+        </RequirePermission>
       </div>
 
       {error && (
@@ -53,14 +54,30 @@ export default function EnterprisesPage() {
           borderRadius: "8px",
           border: "1px solid #fcc"
         }}>
-          {error}
+          {error instanceof Error ? error.message : "An error occurred"}
         </div>
       )}
 
       {loading ? (
-        <div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>
+        <TableSkeleton />
       ) : (
-        <EnterpriseDataTable data={enterprises} />
+        <EnterpriseDataTable 
+          data={enterprises} 
+          pagination={pagination}
+          onPaginationChange={(newPage, newLimit) => {
+            setPage(newPage);
+            setLimit(newLimit);
+          }}
+          onSearchChange={(newSearch) => {
+            setSearch(newSearch);
+            setPage(1); // Reset to page 1 on new search
+          }}
+          onFiltersChange={(newStatus, newBillingPlan) => {
+            setStatus(newStatus || '');
+            setBillingPlan(newBillingPlan || '');
+            setPage(1);
+          }}
+        />
       )}
     </section>
   );

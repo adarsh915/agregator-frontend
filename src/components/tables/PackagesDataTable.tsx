@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,131 +13,95 @@ import {
   SortingState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { InternalUser } from "@/lib/types";
+import { BillingPackage } from "@/lib/api";
+import RequirePermission from "../auth/RequirePermission";
 
-interface UsersDataTableProps {
-  data: InternalUser[];
-  currentUserEmail: string;
-  onEdit: (user: InternalUser) => void;
-  onDelete: (user: InternalUser) => void;
+interface PackagesDataTableProps {
+  data: BillingPackage[];
+  onDelete: (id: string) => void;
+  onRefresh?: () => void;
+  pagination?: { total: number; page: number; limit: number; totalPages: number };
+  onPaginationChange?: (page: number, limit: number) => void;
+  onSearchChange?: (search: string) => void;
 }
 
-export default function UsersDataTable({
-  data,
-  currentUserEmail,
-  onEdit,
+export default function PackagesDataTable({ 
+  data, 
   onDelete,
-}: UsersDataTableProps) {
+  onRefresh,
+  pagination,
+  onPaginationChange,
+  onSearchChange
+}: PackagesDataTableProps) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const columns = useMemo<ColumnDef<InternalUser>[]>(
+  // Debounce search to avoid spamming the backend
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(globalFilter);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [globalFilter, onSearchChange]);
+
+  const columns = useMemo<ColumnDef<BillingPackage>[]>(
     () => [
       {
         accessorKey: "name",
-        header: "User",
+        header: "Package Name",
+        cell: ({ row }) => (
+          <div>
+            <strong style={{ display: "block", fontSize: "0.95rem", marginBottom: 4 }}>
+              {row.original.name}
+            </strong>
+            <small style={{ color: "#64748b", fontSize: "0.8rem", lineHeight: 1.4 }}>
+              {row.original.description || "No description"}
+            </small>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "priceMonthly",
+        header: "Monthly Price",
+        cell: ({ getValue }) => (
+          <span style={{ fontWeight: 500, fontSize: "0.875rem" }}>
+            ${getValue<number>().toLocaleString()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "priceYearly",
+        header: "Yearly Price",
+        cell: ({ getValue }) => (
+          <span style={{ fontWeight: 500, fontSize: "0.875rem" }}>
+            ${getValue<number>().toLocaleString()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "features",
+        header: "Features",
         cell: ({ row }) => {
-          const user = row.original;
+          const features = row.original.features || [];
           return (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                }}
-              >
-                {user.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </div>
-              <div>
-                <strong style={{ display: "block", fontSize: "0.9rem" }}>
-                  {user.name}
-                </strong>
-                {user.email === currentUserEmail && (
-                  <span
-                    className="badge info"
-                    style={{
-                      fontSize: "0.7rem",
-                      padding: "2px 8px",
-                      marginTop: 4,
-                    }}
-                  >
-                    You
-                  </span>
-                )}
-              </div>
-            </div>
+            <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
+              {features.length} feature{features.length !== 1 ? 's' : ''}
+            </span>
           );
         },
       },
       {
-        accessorKey: "email",
-        header: "Email Address",
-        cell: ({ row }) => (
-          <a
-            href={`mailto:${row.original.email}`}
-            style={{
-              color: "#3b82f6",
-              textDecoration: "none",
-              fontSize: "0.875rem",
-            }}
-          >
-            {row.original.email}
-          </a>
-        ),
-      },
-      {
-        accessorKey: "roles",
-        header: "Assigned Roles",
-        cell: ({ row }) => (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {row.original.roles && row.original.roles.length > 0 ? (
-              row.original.roles.map((roleName, idx) => (
-                <span
-                  key={idx}
-                  className="badge info"
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  {roleName}
-                </span>
-              ))
-            ) : (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: "#94a3b8",
-                  color: "white",
-                  fontSize: "0.75rem",
-                }}
-              >
-                No Role
-              </span>
-            )}
-          </div>
-        ),
-        enableSorting: false,
-      },
-      {
-        accessorKey: "status",
+        accessorKey: "isActive",
         header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.status;
+        cell: ({ getValue }) => {
+          const active = getValue<boolean>();
           return (
             <span
-              className={`badge ${status === "Active" ? "healthy" : "critical"}`}
+              className={`badge ${active ? 'healthy' : 'warn'}`}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -148,11 +113,10 @@ export default function UsersDataTable({
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor:
-                    status === "Active" ? "var(--success)" : "var(--danger)",
+                  backgroundColor: active ? "var(--success)" : "var(--warning)",
                 }}
               />
-              {status}
+              {active ? "Active" : "Inactive"}
             </span>
           );
         },
@@ -161,32 +125,52 @@ export default function UsersDataTable({
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          const user = row.original;
-          const isCurrentUser = user.email === currentUserEmail;
           return (
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => onEdit(user)} className="action-btn">
-                Edit
-              </button>
-              <button
-                onClick={() => onDelete(user)}
-                className="action-btn danger"
-                disabled={isCurrentUser}
-                style={{
-                  opacity: isCurrentUser ? 0.5 : 1,
-                  cursor: isCurrentUser ? "not-allowed" : "pointer",
-                }}
-                title={isCurrentUser ? "Cannot deactivate your own account" : ""}
-              >
-                Deactivate
-              </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <RequirePermission resource="packages" action="update" mode="hide">
+                <button
+                  onClick={() => router.push(`/packages/${row.original.id}/edit`)}
+                  className="action-btn"
+                  style={{ textDecoration: "none", border: "none", cursor: "pointer", padding: "6px 12px" }}
+                >
+                  Edit
+                </button>
+              </RequirePermission>
+              
+              <RequirePermission resource="packages" action="delete" mode="hide">
+                <button
+                  onClick={() => {
+                    onDelete(row.original.id);
+                    if (onRefresh) setTimeout(onRefresh, 500);
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    color: "#dc2626",
+                    fontWeight: 500,
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fee2e2";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  Deactivate
+                </button>
+              </RequirePermission>
             </div>
           );
         },
         enableSorting: false,
       },
     ],
-    [currentUserEmail, onEdit, onDelete]
+    [router, onDelete, onRefresh]
   );
 
   const table = useReactTable({
@@ -196,7 +180,14 @@ export default function UsersDataTable({
       sorting,
       columnFilters,
       globalFilter,
+      pagination: {
+        pageIndex: (pagination?.page || 1) - 1,
+        pageSize: pagination?.limit || 10,
+      }
     },
+    pageCount: pagination?.totalPages || -1,
+    manualPagination: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -204,11 +195,6 @@ export default function UsersDataTable({
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
   return (
@@ -216,7 +202,7 @@ export default function UsersDataTable({
       {/* Filter Toolbar */}
       <div className="filter-toolbar" style={{ marginBottom: 20 }}>
         <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "200px" }}>
-          <span>Search users</span>
+          <span>Search packages</span>
           <div style={{ position: "relative", width: "100%" }}>
             <svg
               viewBox="0 0 24 24"
@@ -240,7 +226,7 @@ export default function UsersDataTable({
             </svg>
             <input
               type="text"
-              placeholder="Search name, email or role..."
+              placeholder="Search name, description..."
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
               style={{ paddingLeft: 38 }}
@@ -251,15 +237,17 @@ export default function UsersDataTable({
         <label className="filter-control" style={{ flex: "0 0 auto", minWidth: "140px" }}>
           <span>Status</span>
           <select
-            value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
+            value={(table.getColumn("isActive")?.getFilterValue() as string) ?? ""}
             onChange={(e) =>
-              table.getColumn("status")?.setFilterValue(e.target.value || undefined)
+              table.getColumn("isActive")?.setFilterValue(
+                e.target.value === "" ? undefined : e.target.value === "true"
+              )
             }
             style={{ height: "42px" }}
           >
             <option value="">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
           </select>
         </label>
 
@@ -281,7 +269,7 @@ export default function UsersDataTable({
         <button
           onClick={() => {
             setGlobalFilter("");
-            table.getColumn("status")?.setFilterValue(undefined);
+            table.getColumn("isActive")?.setFilterValue(undefined);
             table.resetSorting();
           }}
           className="filter-reset-btn"
@@ -345,12 +333,12 @@ export default function UsersDataTable({
                 <td colSpan={columns.length} className="empty-state-cell">
                   <div style={{ padding: "40px", textAlign: "center" }}>
                     <p style={{ margin: 0, fontWeight: 600, color: "#0f172a" }}>
-                      No users found
+                      No packages found
                     </p>
                     <p style={{ margin: "8px 0 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-                      {globalFilter || table.getColumn("status")?.getFilterValue()
+                      {globalFilter || table.getColumn("isActive")?.getFilterValue() !== undefined
                         ? "Try adjusting your filters"
-                        : "Get started by adding your first user"}
+                        : "Get started by creating your first billing package"}
                     </p>
                   </div>
                 </td>
@@ -391,15 +379,19 @@ export default function UsersDataTable({
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
                 table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
+              pagination?.total || 0
             )}{" "}
-            of {table.getFilteredRowModel().rows.length} entries
+            of {pagination?.total || 0} entries
           </small>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button
               className="filter-reset-btn"
               style={{ margin: 0, padding: "8px 16px" }}
-              onClick={() => table.previousPage()}
+              onClick={() => {
+                if (onPaginationChange && table.getCanPreviousPage()) {
+                  onPaginationChange(table.getState().pagination.pageIndex, table.getState().pagination.pageSize);
+                }
+              }}
               disabled={!table.getCanPreviousPage()}
             >
               Previous
@@ -420,7 +412,11 @@ export default function UsersDataTable({
             <button
               className="filter-reset-btn"
               style={{ margin: 0, padding: "8px 16px" }}
-              onClick={() => table.nextPage()}
+              onClick={() => {
+                if (onPaginationChange && table.getCanNextPage()) {
+                  onPaginationChange(table.getState().pagination.pageIndex + 2, table.getState().pagination.pageSize);
+                }
+              }}
               disabled={!table.getCanNextPage()}
             >
               Next

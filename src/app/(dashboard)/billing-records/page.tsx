@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { billingRecordsApi, enterpriseApi } from "@/lib/api";
 import type { BillingRecord, BillingStats, Enterprise } from "@/lib/types";
-import BillingRecordsDataTable from "@/components/BillingRecordsDataTable";
+import BillingRecordsDataTable from "@/components/tables/BillingRecordsDataTable";
+import TableSkeleton from "@/components/ui/TableSkeleton";
 
 export default function BillingRecordsPage() {
   const [records, setRecords] = useState<BillingRecord[]>([]);
@@ -16,6 +17,10 @@ export default function BillingRecordsPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [enterpriseFilter, setEnterpriseFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
 
   const loadData = async () => {
     setLoading(true);
@@ -25,10 +30,14 @@ export default function BillingRecordsPage() {
       const filters: any = {};
       if (statusFilter !== "all") filters.status = statusFilter;
       if (enterpriseFilter !== "all") filters.enterpriseId = enterpriseFilter;
+      filters.page = page;
+      filters.limit = limit;
+      if (search) filters.search = search;
 
       const recordsRes = await billingRecordsApi.getAll(filters);
       if (recordsRes.ok && recordsRes.records) {
         setRecords(recordsRes.records);
+        if (recordsRes.pagination) setPagination(recordsRes.pagination);
       } else {
         setError(recordsRes.error || "Failed to load billing records");
       }
@@ -53,7 +62,7 @@ export default function BillingRecordsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, enterpriseFilter]);
+  }, [statusFilter, enterpriseFilter, page, limit, search]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -171,6 +180,8 @@ export default function BillingRecordsPage() {
             onClick={() => {
               setStatusFilter("all");
               setEnterpriseFilter("all");
+              setSearch("");
+              setPage(1);
             }}
             className="filter-reset-btn"
             style={{ marginTop: "auto" }}
@@ -194,9 +205,21 @@ export default function BillingRecordsPage() {
       )}
 
       {loading ? (
-        <div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>
+        <TableSkeleton />
       ) : (
-        <BillingRecordsDataTable records={records} onRefresh={loadData} />
+        <BillingRecordsDataTable 
+          records={records} 
+          onRefresh={loadData}
+          pagination={pagination}
+          onPaginationChange={(newPage, newLimit) => {
+            setPage(newPage);
+            setLimit(newLimit);
+          }}
+          onSearchChange={(newSearch) => {
+            setSearch(newSearch);
+            setPage(1);
+          }}
+        />
       )}
     </section>
   );

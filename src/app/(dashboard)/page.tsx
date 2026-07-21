@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 import { enterpriseApi, usersApi } from "@/lib/api";
 import type { Enterprise } from "@/lib/types";
 import "./overview.css";
@@ -22,39 +24,30 @@ const COLORS = ["#3b82f6", "#10b981", "#6366f1", "#f59e0b"];
 
 export default function OverviewPage() {
   const router = useRouter();
-  const [enterprises, setEnterprises] = useState<Enterprise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [usersCount, setUsersCount] = useState({ active: 0, total: 0 });
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load enterprises
-      const entResponse = await enterpriseApi.list();
-      if (entResponse.ok) {
-        setEnterprises(entResponse.enterprises || []);
-      }
-
-      // Load users count
-      const usersResponse = await usersApi.list();
-      if (usersResponse.ok) {
-        const users = usersResponse.users || [];
-        setUsersCount({
-          active: users.filter(u => u.isActive).length,
-          total: users.length
-        });
-      }
-    } catch (error) {
-      console.error("Failed to load data:", error);
-    } finally {
-      setLoading(false);
+  const { data: enterprises = [], isLoading: isLoadingEnterprises } = useQuery({
+    queryKey: ['enterprises'],
+    queryFn: async () => {
+      const res = await enterpriseApi.list();
+      return res.ok ? res.enterprises || [] : [];
     }
-  };
+  });
+
+  const { data: usersCount = { active: 0, total: 0 }, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['usersCount'],
+    queryFn: async () => {
+      const res = await usersApi.list();
+      if (res.ok) {
+        const users = res.users || [];
+        return {
+          active: users.filter((u: any) => u.isActive).length,
+          total: users.length
+        };
+      }
+      return { active: 0, total: 0 };
+    }
+  });
+
+  const loading = isLoadingEnterprises || isLoadingUsers;
 
   // Calculate Monthly Recurring Revenue
   const totalRevenueVal = useMemo(() => {
@@ -129,9 +122,7 @@ export default function OverviewPage() {
   if (loading) {
     return (
       <section>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
-          <p style={{ color: "#64748b" }}>Loading dashboard...</p>
-        </div>
+        <PageSkeleton />
       </section>
     );
   }
@@ -442,3 +433,114 @@ export default function OverviewPage() {
     </section>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

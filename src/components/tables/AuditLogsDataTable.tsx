@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,6 +10,7 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import type { AuditLogEntry } from "@/lib/api";
+import TableSkeleton from "../ui/TableSkeleton";
 import Swal from "sweetalert2";
 
 interface AuditLogsDataTableProps {
@@ -31,6 +32,8 @@ interface AuditLogsDataTableProps {
   setFilterTo: (val: string) => void;
   limit: number;
   onLimitChange: (val: number) => void;
+  filterSearch?: string;
+  setFilterSearch?: (val: string) => void;
   onReset: () => void;
 }
 
@@ -52,9 +55,22 @@ export default function AuditLogsDataTable({
   setFilterTo,
   limit,
   onLimitChange,
+  filterSearch,
+  setFilterSearch,
   onReset,
 }: AuditLogsDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  // Debounce search
+  const [localSearch, setLocalSearch] = useState(filterSearch || "");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (setFilterSearch && localSearch !== filterSearch) {
+        setFilterSearch(localSearch);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearch, setFilterSearch, filterSearch]);
 
   const columns = useMemo<ColumnDef<AuditLogEntry>[]>(
     () => [
@@ -159,6 +175,20 @@ export default function AuditLogsDataTable({
     <div>
       {/* Filter Toolbar matching Enterprise page style */}
       <div className="filter-toolbar" style={{ marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: "1 1 100%", marginBottom: 8 }}>
+          <label className="filter-control" style={{ width: "100%" }}>
+            <span className="material-symbols-outlined" style={{ position: "absolute", left: 12, top: 38, color: "#94a3b8", fontSize: 20 }}>
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Search actions..."
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              style={{ paddingLeft: 40, width: "100%", height: "42px" }}
+            />
+          </label>
+        </div>
         <label className="filter-control" style={{ flex: "1 1 auto", minWidth: "160px" }}>
           <span>Action Type</span>
           <select
@@ -288,8 +318,8 @@ export default function AuditLogsDataTable({
           <tbody>
             {loading && data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: "center", padding: "3rem" }}>
-                  <div className="spinner" style={{ margin: "0 auto" }}></div>
+                <td colSpan={columns.length} style={{ padding: 0 }}>
+                  <TableSkeleton />
                 </td>
               </tr>
             ) : data.length === 0 ? (

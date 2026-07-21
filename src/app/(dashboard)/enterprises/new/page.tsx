@@ -19,7 +19,7 @@ export default function NewEnterprisePage() {
 
   // Load packages on mount
   useEffect(() => {
-    packageApi.list(false).then((res) => {
+    packageApi.list({ includeInactive: false }).then((res) => {
       if (res.ok && res.packages) {
         setPackages(res.packages);
         if (res.packages.length > 0 && !formData.packageId) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDashboard } from "@/app/(dashboard)/layout";
 import { auditLogsApi, AuditLogEntry, AuditLogActor } from "@/lib/api";
 import Swal from "sweetalert2";
-import AuditLogsDataTable from "@/components/AuditLogsDataTable";
+import AuditLogsDataTable from "@/components/tables/AuditLogsDataTable";
 
 export default function AuditLogsPage() {
   const router = useRouter();
@@ -26,6 +26,7 @@ export default function AuditLogsPage() {
   const [filterActor, setFilterActor] = useState("");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
 
   // 1. Guard route: Only super_admin can view this page
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function AuditLogsPage() {
       const res = await auditLogsApi.list({
         page,
         limit,
+        search: filterSearch || undefined,
         action: filterAction || undefined,
         actorId: filterActor || undefined,
         from: filterFrom ? new Date(filterFrom).toISOString() : undefined,
@@ -93,13 +95,14 @@ export default function AuditLogsPage() {
       fetchLogs();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filterAction, filterActor, filterFrom, filterTo, profileRole]);
+  }, [page, limit, filterSearch, filterAction, filterActor, filterFrom, filterTo, profileRole]);
 
   const handleReset = () => {
     setFilterAction("");
     setFilterActor("");
     setFilterFrom("");
     setFilterTo("");
+    setFilterSearch("");
     setPage(1);
   };
 
@@ -120,26 +123,30 @@ export default function AuditLogsPage() {
         </button>
       </div>
 
-      <AuditLogsDataTable 
-        data={logs}
-        loading={loading}
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        actions={actions}
-        actors={actors}
-        filterAction={filterAction}
-        setFilterAction={(val) => { setFilterAction(val); setPage(1); }}
-        filterActor={filterActor}
-        setFilterActor={(val) => { setFilterActor(val); setPage(1); }}
-        filterFrom={filterFrom}
-        setFilterFrom={(val) => { setFilterFrom(val); setPage(1); }}
-        filterTo={filterTo}
-        setFilterTo={(val) => { setFilterTo(val); setPage(1); }}
-        limit={limit}
-        onLimitChange={(val) => { setLimit(val); setPage(1); }}
-        onReset={handleReset}
-      />
+      <div className="panel-card" style={{ padding: 0 }}>
+        <AuditLogsDataTable 
+          data={logs}
+          loading={loading}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          actions={actions}
+          actors={actors}
+          filterAction={filterAction}
+          setFilterAction={(val) => { setFilterAction(val); setPage(1); }}
+          filterActor={filterActor}
+          setFilterActor={(val) => { setFilterActor(val); setPage(1); }}
+          filterFrom={filterFrom}
+          setFilterFrom={(val) => { setFilterFrom(val); setPage(1); }}
+          filterTo={filterTo}
+          setFilterTo={(val) => { setFilterTo(val); setPage(1); }}
+          limit={limit}
+          onLimitChange={(val) => { setLimit(val); setPage(1); }}
+          filterSearch={filterSearch}
+          setFilterSearch={(val) => { setFilterSearch(val); setPage(1); }}
+          onReset={handleReset}
+        />
+      </div>
     </section>
   );
 }
